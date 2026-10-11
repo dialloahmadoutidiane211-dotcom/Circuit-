@@ -1,0 +1,555 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingénierie Lab — Simulateur interactif</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{--bg:#0a1020;--line:#263651;--text:#edf4ff;--muted:#9aabc5;--cyan:#56d9ed;--blue:#7194ff;--orange:#ffbd69}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top left,#12294a 0%,var(--bg) 42%);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.side{padding:25px 16px;border-right:1px solid var(--line);background:#09101ee8;position:sticky;top:0;height:100vh}
+.brand{display:flex;gap:12px;align-items:center;padding:0 10px 25px}
+.logo{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#52d9ed,#6e8aff);color:#071324;font-size:23px;font-weight:900}
+.brand b{display:block;font-size:17px}
+.brand small{color:var(--muted)}
+.navlabel{color:#7085a5;text-transform:uppercase;font-size:11px;letter-spacing:1.6px;padding:12px}
+.nav button{display:flex;width:100%;text-align:left;gap:11px;align-items:center;border:1px solid transparent;color:#aebed5;background:transparent;padding:12px;border-radius:11px;margin:4px 0}
+.nav button.active,.nav button:hover{background:#162640;border-color:#2a4364;color:white}
+.nav .ico{width:22px;text-align:center;font-size:17px}
+.sidefoot{position:absolute;bottom:18px;left:22px;right:22px;color:#8293ad;font-size:12px}
+.main{padding:28px clamp(18px,3vw,48px) 60px;max-width:1600px;width:100%;margin:auto}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:25px}
+.eyebrow{color:var(--cyan);font-weight:700;text-transform:uppercase;letter-spacing:1.8px;font-size:11px}
+.h1{font-size:clamp(28px,3vw,40px);letter-spacing:-1.2px;line-height:1.1;margin:7px 0 10px}
+.sub{color:var(--muted);max-width:760px}
+.status{white-space:nowrap;border:1px solid #285847;color:#8ce8c8;background:#12352e66;border-radius:99px;padding:7px 12px;font-size:12px}
+.hero{background:linear-gradient(110deg,#142e4d,#17213d 72%,#29254c);border:1px solid #2d476b;border-radius:20px;padding:24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:22px}
+.hero h2{margin:0 0 8px;font-size:22px}
+.hero p{margin:0;color:#b6c8e0;max-width:650px}
+.hero .orb{font-size:62px;opacity:.9;padding:0 18px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}
+.metric,.panel,.module-card{background:linear-gradient(145deg,#121e33,#0f192b);border:1px solid var(--line);border-radius:16px}
+.metric{padding:17px}
+.metric label{display:block;color:var(--muted);font-size:12px}
+.metric strong{font-size:25px;display:block;margin-top:6px;overflow-wrap:anywhere}
+.metric small{color:#7e93b2}
+.grid2{display:grid;grid-template-columns:minmax(260px,350px) minmax(0,1fr);gap:16px;align-items:start}
+.panel{padding:19px;margin-bottom:16px;min-width:0}
+.panel h3{margin:0 0 5px;font-size:17px}
+.muted{color:var(--muted);font-size:13px}
+.control{margin:19px 0}
+.controlhead{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin-bottom:7px}
+.controlhead output{color:var(--cyan);font-weight:700}
+.control input[type=range]{width:100%;accent-color:var(--cyan)}
+.control input[type=text],select{width:100%;padding:10px 12px;color:var(--text);background:#0a1425;border:1px solid #30425e;border-radius:9px}
+.plot{min-height:340px;width:100%}
+.tabrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tabrow button,.btn{border:1px solid #314563;background:#15233a;color:#c7d7ed;border-radius:9px;padding:9px 13px}
+.tabrow button.active,.btn.primary{background:#24748a;border-color:#3ba9bd;color:white}
+.btn{margin-top:8px}
+.module-card{padding:19px;cursor:pointer;transition:.15s}
+.module-card:hover{transform:translateY(-2px);border-color:#4a789d}
+.module-card .bigico{font-size:27px}
+.module-card h3{margin:10px 0 5px}
+.module-card p{color:var(--muted);font-size:13px;margin:0}
+.modules{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.hidden{display:none!important}
+.notice{border:1px solid #5b492a;background:#33291877;color:#ffd99d;border-radius:11px;padding:12px;font-size:13px}
+.success{border-color:#235f4b;background:#14372e;color:#9df0cf}
+.drop{border:1px dashed #496487;background:#0b1729;padding:28px;border-radius:13px;text-align:center}
+.drop input{margin-top:12px;max-width:100%}
+.pill{display:inline-block;border:1px solid #31516a;background:#102b3b;color:#80e3ef;border-radius:30px;padding:3px 9px;font-size:11px;margin-bottom:8px}
+.footer{color:#7385a0;font-size:12px;margin-top:26px}
+@media(max-width:850px){
+.shell{grid-template-columns:1fr}
+.side{position:relative;height:auto;padding:13px;border-right:0;border-bottom:1px solid var(--line)}
+.brand{padding:0 5px 10px}
+.nav{display:flex;overflow:auto;gap:5px}
+.navlabel,.sidefoot{display:none}
+.nav button{white-space:nowrap;width:auto;padding:9px 11px}
+.main{padding:20px 14px 40px}
+.grid2{grid-template-columns:1fr}
+.cards{grid-template-columns:1fr}
+.hero .orb{display:none}
+.modules{grid-template-columns:1fr}
+.status{display:none}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side">
+  <div class="brand">
+    <div class="logo">⚙</div>
+    <div><b>Ingénierie Lab</b><small>Simuler · Comprendre · Résoudre</small></div>
+  </div>
+  <div class="navlabel">Espace de travail</div>
+  <nav class="nav">
+    <button class="active" data-page="home"><span class="ico">⌂</span>Vue d'ensemble</button>
+    <button data-page="rlc"><span class="ico">∿</span>Génie électrique</button>
+    <button data-page="telecom"><span class="ico">〰</span>Télécoms & signaux</button>
+    <button data-page="network"><span class="ico">⌘</span>Réseaux IP</button>
+    <button data-page="pid"><span class="ico">◉</span>Automatique / PID</button>
+    <button data-page="upload"><span class="ico">⇧</span>Analyser un énoncé</button>
+  </nav>
+  <div class="sidefoot">Prototype pédagogique · v0.1<br>Calculs locaux dans le navigateur</div>
+</aside>
+
+<main class="main">
+<div class="topline">
+  <div>
+    <div class="eyebrow">Laboratoire numérique</div>
+    <div class="h1" id="pageTitle">L'ingénierie devient interactive.</div>
+    <div class="sub" id="pageSub">Explore les systèmes, ajuste les paramètres et observe immédiatement leur comportement.</div>
+  </div>
+  <div class="status">● Simulateur prêt</div>
+</div>
+
+<section id="page-home">
+  <div class="hero">
+    <div>
+      <span class="pill">ENVIRONNEMENT DE SIMULATION</span>
+      <h2>Du calcul à l'intuition.</h2>
+      <p>Un espace unique pour expérimenter les circuits, les signaux, les réseaux IP et les systèmes asservis — avec des paramètres modifiables et des graphiques interactifs.</p>
+    </div>
+    <div class="orb">⌁</div>
+  </div>
+  <div class="cards">
+    <div class="metric"><label>Domaines disponibles</label><strong>4 +</strong><small>modules de simulation et calcul</small></div>
+    <div class="metric"><label>Graphiques dynamiques</label><strong>Interactifs</strong><small>zoom, déplacement et lecture des valeurs</small></div>
+    <div class="metric"><label>Analyse d'énoncés</label><strong>PDF · TXT · Image</strong><small>extraction préliminaire dans le navigateur</small></div>
+  </div>
+  <h2>Choisir un laboratoire</h2>
+  <div class="modules">
+    <div class="module-card" data-open="rlc"><div class="bigico">⚡</div><h3>Génie électrique</h3><p>Circuit RLC, amortissement, réponse temporelle et diagrammes de Bode.</p></div>
+    <div class="module-card" data-open="telecom"><div class="bigico">📡</div><h3>Télécommunications</h3><p>Modulation AM et échantillonnage avec critère de Nyquist-Shannon.</p></div>
+    <div class="module-card" data-open="network"><div class="bigico">🌐</div><h3>Réseaux IP</h3><p>Adresse réseau, masque, broadcast et plage d'adresses hôtes.</p></div>
+    <div class="module-card" data-open="pid"><div class="bigico">🎛️</div><h3>Automatique / PID</h3><p>Réponse indicielle et observation de l'effet des paramètres du correcteur.</p></div>
+    <div class="module-card" data-open="upload"><div class="bigico">📄</div><h3>Analyser un énoncé</h3><p>Importer un document, extraire son texte et repérer les données à vérifier.</p></div>
+    <div class="module-card" data-open="rlc"><div class="bigico">📈</div><h3>Explorer les modèles</h3><p>Pars d'un modèle simple, modifie les valeurs et compare les résultats.</p></div>
+  </div>
+</section>
+
+<section id="page-rlc" class="hidden">
+  <div class="cards">
+    <div class="metric"><label>Fréquence propre</label><strong id="mF0">159.15 Hz</strong><small>f₀ = 1 / (2π√LC)</small></div>
+    <div class="metric"><label>Amortissement</label><strong id="mZeta">0.250</strong><small>ζ = R/2 · √(C/L)</small></div>
+    <div class="metric"><label>Régime</label><strong id="mRegime">Sous-amorti</strong><small>selon le coefficient ζ</small></div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Paramètres du circuit</h3>
+      <div class="muted">RLC série · sortie mesurée aux bornes du condensateur</div>
+      <div class="control"><div class="controlhead"><label>Résistance R</label><output id="rOut">50 Ω</output></div><input id="rVal" type="range" min="1" max="500" value="50"></div>
+      <div class="control"><div class="controlhead"><label>Inductance L</label><output id="lOut">100 mH</output></div><input id="lVal" type="range" min="1" max="500" value="100"></div>
+      <div class="control"><div class="controlhead"><label>Capacité C</label><output id="cOut">10 µF</output></div><input id="cVal" type="range" min="1" max="500" value="10"></div>
+      <div class="control"><div class="controlhead"><label>Amplitude d'entrée</label><output id="vOut">5 V</output></div><input id="vVal" type="range" min="0" max="20" step=".5" value="5"></div>
+      <div class="control"><div class="controlhead"><label>Excitation</label></div><select id="excite"><option value="free">Régime libre (entrée nulle)</option><option value="forced" selected>Forcé sinusoïdal</option></select></div>
+      <div class="control"><div class="controlhead"><label>Fréquence d'entrée</label><output id="fdOut">100 Hz</output></div><input id="fdVal" type="range" min="1" max="5000" value="100"></div>
+      <div class="control"><div class="controlhead"><label>Durée observée</label><output id="durOut">100 ms</output></div><input id="durVal" type="range" min="5" max="500" step="5" value="100"></div>
+    </div>
+    <div class="panel"><h3>Réponse temporelle</h3><div class="muted">Ajuste les curseurs pour observer l'évolution du signal.</div><div id="timePlot" class="plot"></div></div>
+  </div>
+  <div class="panel"><h3>Diagrammes de Bode</h3><div class="muted">Gain en décibels et phase en degrés selon la fréquence.</div><div id="bodePlot" class="plot"></div></div>
+  <div class="notice">Modèle utilisé : H(s) = 1 / (LCs² + RCs + 1). La réponse temporelle démarre avec des conditions initiales nulles. En régime libre, une entrée nulle avec des conditions initiales nulles produit naturellement une sortie nulle.</div>
+</section>
+
+<section id="page-telecom" class="hidden">
+  <div class="tabrow"><button class="active" data-tab="am">Modulation AM</button><button data-tab="sampling">Échantillonnage</button></div>
+  <div id="amTab">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Réglages AM</h3>
+        <div class="control"><div class="controlhead"><label>Fréquence message</label><output id="fmOut">5 Hz</output></div><input id="fm" type="range" min="1" max="50" value="5"></div>
+        <div class="control"><div class="controlhead"><label>Fréquence porteuse</label><output id="fcOut">80 Hz</output></div><input id="fc" type="range" min="20" max="300" value="80"></div>
+        <div class="control"><div class="controlhead"><label>Indice de modulation</label><output id="muOut">0.70</output></div><input id="mu" type="range" min="0" max="1" step=".05" value=".7"></div>
+        <div class="notice">Une modulation AM classique évite la surmodulation lorsque 0 ≤ μ ≤ 1.</div>
+      </div>
+      <div class="panel"><h3>Message, porteuse et signal modulé</h3><div id="amPlot" class="plot"></div></div>
+    </div>
+  </div>
+  <div id="samplingTab" class="hidden">
+    <div class="grid2">
+      <div class="panel">
+        <h3>Réglages d'échantillonnage</h3>
+        <div class="control"><div class="controlhead"><label>Fréquence du signal</label><output id="fsigOut">10 Hz</output></div><input id="fsig" type="range" min="1" max="100" value="10"></div>
+        <div class="control"><div class="controlhead"><label>Fréquence d'échantillonnage</label><output id="fsampOut">30 Hz</output></div><input id="fsamp" type="range" min="2" max="250" value="30"></div>
+        <div id="nyq" class="notice success">Critère de Nyquist respecté.</div>
+      </div>
+      <div class="panel"><h3>Signal et échantillons</h3><div id="samplePlot" class="plot"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="page-network" class="hidden">
+  <div class="grid2">
+    <div class="panel">
+      <h3>Calculateur IPv4</h3>
+      <p class="muted">Entre une adresse IPv4 avec un préfixe CIDR, par exemple 192.168.10.34/24.</p>
+      <div class="control"><label>Adresse / préfixe</label><input id="ipInput" type="text" value="192.168.10.34/24"></div>
+      <button class="btn primary" id="ipCalc">Calculer le sous-réseau</button>
+      <div id="ipError" class="notice hidden"></div>
+    </div>
+    <div class="panel">
+      <h3>Résultats</h3>
+      <div id="ipResults" class="cards">
+        <div class="metric"><label>Adresse réseau</label><strong>192.168.10.0</strong></div>
+        <div class="metric"><label>Masque</label><strong>255.255.255.0</strong></div>
+        <div class="metric"><label>Broadcast</label><strong>192.168.10.255</strong></div>
+      </div>
+      <div id="ipMore" class="muted">Nombre d'adresses et plage hôtes affichés après calcul.</div>
+    </div>
+  </div>
+  <div class="notice">Ce calculateur ne teste pas la connectivité réelle et n'envoie aucun ping sur un réseau.</div>
+</section>
+
+<section id="page-pid" class="hidden">
+  <div class="cards">
+    <div class="metric"><label>Dépassement observé</label><strong id="overshoot">0 %</strong><small>par rapport à la consigne unitaire</small></div>
+    <div class="metric"><label>Sortie finale</label><strong id="finalY">1.00</strong><small>valeur à la fin de la simulation</small></div>
+    <div class="metric"><label>État numérique</label><strong id="pidState">Stable</strong><small>observation sur la fenêtre simulée</small></div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Paramètres du procédé et du PID</h3>
+      <div class="control"><div class="controlhead"><label>Gain procédé K</label><output id="pkOut">1.0</output></div><input id="pk" type="range" min=".1" max="10" step=".1" value="1"></div>
+      <div class="control"><div class="controlhead"><label>Constante de temps τ</label><output id="tauOut">1.0 s</output></div><input id="tau" type="range" min=".1" max="10" step=".1" value="1"></div>
+      <div class="control"><div class="controlhead"><label>Gain proportionnel Kp</label><output id="kpOut">2.0</output></div><input id="kp" type="range" min="0" max="20" step=".1" value="2"></div>
+      <div class="control"><div class="controlhead"><label>Gain intégral Ki</label><output id="kiOut">0.5</output></div><input id="ki" type="range" min="0" max="10" step=".1" value=".5"></div>
+      <div class="control"><div class="controlhead"><label>Gain dérivé Kd</label><output id="kdOut">0.00</output></div><input id="kd" type="range" min="0" max="5" step=".05" value="0"></div>
+    </div>
+    <div class="panel"><h3>Réponse à un échelon unitaire</h3><div id="pidPlot" class="plot"></div></div>
+  </div>
+  <div class="notice">Simulation pédagogique d'un procédé du premier ordre avec intégration numérique. Ce résultat ne remplace pas une analyse formelle de stabilité pour un système réel.</div>
+</section>
+
+<section id="page-upload" class="hidden">
+  <div class="panel">
+    <h3>Importer un sujet d'exercice</h3>
+    <p class="muted">Les fichiers restent dans ton navigateur pendant l'analyse. Formats : PDF, TXT, PNG, JPG, WEBP.</p>
+    <div class="drop">📄<br><b>Glisse ton document ici ou sélectionne un fichier</b><br><input id="fileInput" type="file" accept=".pdf,.txt,.png,.jpg,.jpeg,.webp"></div>
+    <div id="fileStatus" class="muted" style="margin-top:12px"></div>
+    <div class="control">
+      <label>Texte extrait — vérifie-le avant l'analyse</label>
+      <textarea id="docText" rows="10" style="width:100%;padding:12px;background:#0a1425;color:var(--text);border:1px solid #30425e;border-radius:10px" placeholder="Le texte du document apparaîtra ici..."></textarea>
+    </div>
+    <button class="btn primary" id="analyseDoc">Analyser le texte</button>
+    <div id="analysisResult" class="panel hidden" style="margin-top:16px"></div>
+  </div>
+  <div class="notice">Limite importante : ce prototype extrait et classe les énoncés. Il ne produit pas encore une correction universelle garantie ni une simulation automatiquement déduite de chaque document. Le texte extrait peut contenir des erreurs d'OCR.</div>
+</section>
+
+<div class="footer">Ingénierie Lab · Prototype éducatif · Vérifier les résultats avant toute application réelle.</div>
+</main>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+const titles={
+home:["L'ingénierie devient interactive.","Explore les systèmes, ajuste les paramètres et observe immédiatement leur comportement."],
+rlc:["Génie électrique","Circuit RLC série · réponse temporelle et diagrammes de Bode."],
+telecom:["Télécommunications & signaux","Modulation d'amplitude et échantillonnage."],
+network:["Réseaux IP","Calcul et compréhension des sous-réseaux IPv4."],
+pid:["Automatique / PID","Observe la réponse d'un système asservi lorsque les gains changent."],
+upload:["Analyser un énoncé","Importe un document pour extraire et examiner ses données."]
+};
+
+function openPage(name){
+  document.querySelectorAll('main section[id^="page-"]').forEach(x=>x.classList.add('hidden'));
+  $('page-'+name).classList.remove('hidden');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===name));
+  $('pageTitle').textContent=titles[name][0];
+  $('pageSub').textContent=titles[name][1];
+  if(name==='rlc')drawRLC();
+  if(name==='telecom')drawAM();
+  if(name==='pid')drawPID();
+}
+document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>openPage(b.dataset.page));
+document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openPage(b.dataset.open));
+
+function layout(fig,title,x,y){
+  return {
+    title:{text:title,font:{color:'#eaf2ff',size:15}},
+    paper_bgcolor:'rgba(0,0,0,0)',
+    plot_bgcolor:'rgba(0,0,0,0)',
+    font:{color:'#aebed5'},
+    margin:{l:52,r:30,t:48,b:48},
+    xaxis:{title:x,gridcolor:'#263651',zerolinecolor:'#344763'},
+    yaxis:{title:y,gridcolor:'#263651',zerolinecolor:'#344763'},
+    legend:{orientation:'h',y:-.22},
+    hovermode:'x unified',
+    autosize:true
+  };
+}
+const cfg={responsive:true,displaylogo:false};
+function linspace(a,b,n){return Array.from({length:n},(_,i)=>a+(b-a)*i/(n-1))}
+
+function drawRLC(){
+  let R=+$('rVal').value,L=+$('lVal').value/1000,C=+$('cVal').value/1e6;
+  let V=+$('vVal').value,fd=+$('fdVal').value,T=+$('durVal').value/1000;
+  let forced=$('excite').value==='forced';
+
+  $('rOut').textContent=R+' Ω';
+  $('lOut').textContent=$('lVal').value+' mH';
+  $('cOut').textContent=$('cVal').value+' µF';
+  $('vOut').textContent=V+' V';
+  $('fdOut').textContent=fd+' Hz';
+  $('durOut').textContent=$('durVal').value+' ms';
+
+  let f0=1/(2*Math.PI*Math.sqrt(L*C)),z=R/2*Math.sqrt(C/L);
+  $('mF0').textContent=f0.toFixed(2)+' Hz';
+  $('mZeta').textContent=z.toFixed(3);
+  $('mRegime').textContent=Math.abs(z-1)<.02?'Critique':z<1?'Sous-amorti':'Sur-amorti';
+
+  let n=1500,t=linspace(0,T,n),dt=t[1]-t[0];
+  let y=new Array(n).fill(0),v=new Array(n).fill(0);
+  let u=t.map(q=>forced?V*Math.sin(2*Math.PI*fd*q):0);
+
+  function d(a,b,inp){return [b,(inp-R*C*b-a)/(L*C)]}
+
+  for(let i=0;i<n-1;i++){
+    let a=d(y[i],v[i],u[i]);
+    let b=d(y[i]+dt*a[0]/2,v[i]+dt*a[1]/2,(u[i]+u[i+1])/2);
+    let c=d(y[i]+dt*b[0]/2,v[i]+dt*b[1]/2,(u[i]+u[i+1])/2);
+    let e=d(y[i]+dt*c[0],v[i]+dt*c[1],u[i+1]);
+
+    y[i+1]=y[i]+dt*(a[0]+2*b[0]+2*c[0]+e[0])/6;
+    v[i+1]=v[i]+dt*(a[1]+2*b[1]+2*c[1]+e[1])/6;
+
+    if(!Number.isFinite(y[i+1])||Math.abs(y[i+1])>1e8){
+      y=y.slice(0,i+1);t=t.slice(0,i+1);break;
+    }
+  }
+
+  let traces=[{x:t,y,name:'Tension aux bornes de C',mode:'lines',line:{color:'#56d9ed',width:2}}];
+  if(forced)traces.push({x:t,y:u,name:'Entrée',mode:'lines',line:{color:'#ffbd69',dash:'dot'}});
+  Plotly.react('timePlot',traces,layout(null,'Réponse temporelle','Temps (s)','Tension (V)'),cfg);
+
+  let fmin=Math.max(.1,f0/100),fmax=Math.max(fmin*10,f0*100);
+  let fs=linspace(Math.log10(fmin),Math.log10(fmax),500).map(q=>10**q),gain=[],phase=[];
+  fs.forEach(f=>{
+    let w=2*Math.PI*f,re=1-w*w*L*C,im=w*R*C;
+    gain.push(20*Math.log10(1/Math.hypot(re,im)));
+    phase.push(-Math.atan2(im,re)*180/Math.PI);
+  });
+
+  Plotly.react('bodePlot',[
+    {x:fs,y:gain,name:'Gain (dB)',mode:'lines',line:{color:'#56d9ed',width:2}},
+    {x:fs,y:phase,name:'Phase (°)',mode:'lines',yaxis:'y2',line:{color:'#ffbd69',width:2}}
+  ],{
+    ...layout(null,'Diagrammes de Bode','Fréquence (Hz)','Gain (dB)'),
+    xaxis:{type:'log',title:'Fréquence (Hz)',gridcolor:'#263651'},
+    yaxis:{title:'Gain (dB)',gridcolor:'#263651'},
+    yaxis2:{title:'Phase (°)',overlaying:'y',side:'right',gridcolor:'#263651'}
+  },cfg);
+}
+['rVal','lVal','cVal','vVal','fdVal','durVal','excite'].forEach(id=>$(id).addEventListener('input',drawRLC));
+
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));
+  $('amTab').classList.toggle('hidden',b.dataset.tab!=='am');
+  $('samplingTab').classList.toggle('hidden',b.dataset.tab!=='sampling');
+  b.dataset.tab==='am'?drawAM():drawSampling();
+});
+
+function drawAM(){
+  let fm=+$('fm').value,fc=+$('fc').value,mu=+$('mu').value;
+  $('fmOut').textContent=fm+' Hz';
+  $('fcOut').textContent=fc+' Hz';
+  $('muOut').textContent=mu.toFixed(2);
+  let t=linspace(0,1,2500);
+  let m=t.map(q=>Math.cos(2*Math.PI*fm*q));
+  let c=t.map(q=>Math.cos(2*Math.PI*fc*q));
+  let s=t.map((q,i)=>(1+mu*m[i])*c[i]);
+  Plotly.react('amPlot',[
+    {x:t,y:m,name:'Message',line:{color:'#56d9ed'}},
+    {x:t,y:c,name:'Porteuse',line:{color:'#7194ff'}},
+    {x:t,y:s,name:'Signal AM',line:{color:'#ffbd69',width:1.5}}
+  ],layout(null,'Modulation d’amplitude','Temps (s)','Amplitude'),cfg);
+}
+['fm','fc','mu'].forEach(id=>$(id).addEventListener('input',drawAM));
+
+function drawSampling(){
+  let f=+$('fsig').value,fs=+$('fsamp').value;
+  $('fsigOut').textContent=f+' Hz';
+  $('fsampOut').textContent=fs+' Hz';
+  let t=linspace(0,1,2200),x=t.map(q=>Math.sin(2*Math.PI*f*q));
+  let ts=linspace(0,Math.max(0,1-1/fs),Math.min(300,Math.floor(fs)+1));
+  let xs=ts.map(q=>Math.sin(2*Math.PI*f*q));
+
+  Plotly.react('samplePlot',[
+    {x:t,y:x,name:'Signal idéal',mode:'lines',line:{color:'#56d9ed',width:2}},
+    {x:ts,y:xs,name:'Échantillons',mode:'markers',marker:{color:'#ffbd69',size:7}}
+  ],layout(null,'Échantillonnage','Temps (s)','Amplitude'),cfg);
+
+  $('nyq').className='notice '+(fs>=2*f?'success':'');
+  $('nyq').textContent=fs>=2*f
+    ?`Critère de Nyquist respecté : fs = ${fs} Hz ≥ 2f = ${2*f} Hz.`
+    :`Sous-échantillonnage possible : il faut au minimum ${2*f} Hz pour ce signal sinusoïdal.`;
+}
+['fsig','fsamp'].forEach(id=>$(id).addEventListener('input',drawSampling));
+
+function ipNum(s){return s.split('.').reduce((a,p)=>(a*256+Number(p))>>>0,0)>>>0}
+function ipStr(n){return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join('.')}
+function maskNum(p){return p===0?0:(0xffffffff<<(32-p))>>>0}
+
+function calcIP(){
+  let raw=$('ipInput').value.trim();
+  let m=raw.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+  $('ipError').classList.add('hidden');
+
+  if(!m){
+    $('ipError').textContent='Format invalide. Utilise une adresse comme 192.168.1.10/24.';
+    $('ipError').classList.remove('hidden');return;
+  }
+
+  let oct=m[1].split('.').map(Number),p=+m[2];
+  if(oct.some(v=>v<0||v>255)||p<0||p>32){
+    $('ipError').textContent='Adresse IPv4 ou préfixe hors limites.';
+    $('ipError').classList.remove('hidden');return;
+  }
+
+  let ip=ipNum(m[1]),mask=maskNum(p),net=(ip&mask)>>>0;
+  let bcast=(net|(~mask>>>0))>>>0,total=2**(32-p);
+  let hostCount=p>=31?total:Math.max(0,total-2);
+  let first=p<=30?ipStr((net+1)>>>0):'—';
+  let last=p<=30?ipStr((bcast-1)>>>0):'—';
+
+  $('ipResults').innerHTML=`
+    <div class="metric"><label>Adresse réseau</label><strong>${ipStr(net)}</strong></div>
+    <div class="metric"><label>Masque</label><strong>${ipStr(mask)}</strong></div>
+    <div class="metric"><label>Broadcast</label><strong>${ipStr(bcast)}</strong></div>`;
+
+  $('ipMore').innerHTML=`
+    <p><b>Préfixe :</b> /${p}</p>
+    <p><b>Nombre total d'adresses :</b> ${total.toLocaleString('fr-FR')}</p>
+    <p><b>Hôtes usuels :</b> ${hostCount.toLocaleString('fr-FR')}</p>
+    <p><b>Plage hôtes :</b> ${first} — ${last}</p>`;
+}
+$('ipCalc').onclick=calcIP;
+calcIP();
+
+function drawPID(){
+  let K=+$('pk').value,tau=+$('tau').value,kp=+$('kp').value;
+  let ki=+$('ki').value,kd=+$('kd').value;
+  [['pkOut',K.toFixed(1)],['tauOut',tau.toFixed(1)+' s'],
+   ['kpOut',kp.toFixed(1)],['kiOut',ki.toFixed(1)],
+   ['kdOut',kd.toFixed(2)]].forEach(([id,v])=>$(id).textContent=v);
+
+  let n=2500,T=20,t=linspace(0,T,n),dt=t[1]-t[0];
+  let y=new Array(n).fill(0),integ=0,prev=1,div=false;
+
+  for(let i=1;i<n;i++){
+    let e=1-y[i-1];
+    integ+=e*dt;
+    let de=(e-prev)/dt,u=kp*e+ki*integ+kd*de;
+    let dy=(K*u-y[i-1])/tau;
+    y[i]=y[i-1]+dt*dy;
+    prev=e;
+
+    if(!Number.isFinite(y[i])||Math.abs(y[i])>1e5){
+      y=y.slice(0,i+1);t=t.slice(0,i+1);div=true;break;
+    }
+  }
+
+  let peak=Math.max(...y.filter(Number.isFinite));
+  let ov=Math.max(0,(peak-1)*100);
+  $('overshoot').textContent=div?'Divergent':ov.toFixed(1)+' %';
+  $('finalY').textContent=y[y.length-1].toFixed(3);
+  $('pidState').textContent=div?'Divergent':Math.abs(y[y.length-1]-1)<.05?'Converge':'À observer';
+
+  Plotly.react('pidPlot',[
+    {x:t,y,name:'Sortie y(t)',line:{color:'#56d9ed',width:2}},
+    {x:[0,T],y:[1,1],name:'Consigne',line:{color:'#ffbd69',dash:'dash'}}
+  ],layout(null,'Réponse indicielle','Temps (s)','Sortie'),cfg);
+}
+['pk','tau','kp','ki','kd'].forEach(id=>$(id).addEventListener('input',drawPID));
+
+$('fileInput').addEventListener('change',async e=>{
+  let f=e.target.files[0];
+  if(!f)return;
+  $('fileStatus').textContent='Lecture de '+f.name+'…';
+  $('docText').value='';
+
+  try{
+    if(f.name.toLowerCase().endsWith('.txt')){
+      $('docText').value=await f.text();
+      $('fileStatus').textContent='Texte chargé. Vérifie le contenu.';
+    }else if(f.name.toLowerCase().endsWith('.pdf')){
+      if(!window.pdfjsLib)throw Error('La bibliothèque PDF ne s’est pas chargée. Vérifie ta connexion Internet.');
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      let pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise;
+      let parts=[];
+      for(let i=1;i<=pdf.numPages;i++){
+        let page=await pdf.getPage(i);
+        let content=await page.getTextContent();
+        parts.push(content.items.map(x=>x.str).join(' '));
+      }
+      $('docText').value=parts.join('\n\n');
+      if(!$('docText').value.trim()){
+        $('fileStatus').textContent='PDF sans texte extractible : il peut s’agir d’un document scanné. Essaie une image ou un PDF avec texte.';
+      }else{
+        $('fileStatus').textContent=`Extraction terminée : ${pdf.numPages} page(s). Vérifie le texte.`;
+      }
+    }else{
+      if(!window.Tesseract)throw Error('Le moteur OCR ne s’est pas chargé. Vérifie ta connexion Internet.');
+      $('fileStatus').textContent='OCR en cours — cela peut prendre un moment…';
+      let result=await Tesseract.recognize(f,'fra+eng',{
+        logger:m=>{
+          if(m.status==='recognizing text'){
+            $('fileStatus').textContent=`OCR en cours : ${Math.round((m.progress||0)*100)} %`;
+          }
+        }
+      });
+      $('docText').value=result.data.text;
+      $('fileStatus').textContent='OCR terminé. Vérifie le texte, car les symboles et unités peuvent être mal reconnus.';
+    }
+  }catch(err){
+    $('fileStatus').textContent='Erreur : '+err.message;
+  }
+});
+
+function analyse(){
+  let txt=$('docText').value,low=txt.toLowerCase();
+  let kws={
+    'Génie électrique':['rlc','résistance','inductance','condensateur','bode','tension','courant'],
+    'Télécommunications & signaux':['modulation','échantillonnage','shannon','porteuse','qam','fréquence'],
+    'Réseaux IP':['sous-réseau','subnet','masque','adresse ip','cidr','routage','passerelle'],
+    'Systèmes asservis':['pid','correcteur','réponse indicielle','asservissement','stabilité','fonction de transfert']
+  };
+
+  let scores=Object.entries(kws)
+    .map(([name,words])=>[name,words.reduce((s,w)=>s+(low.split(w).length-1),0)])
+    .sort((a,b)=>b[1]-a[1]);
+
+  let domain=scores[0][1]?scores[0][0]:'Domaine à confirmer';
+  let vals=txt.match(/(?<![A-Za-z])[-+]?\d+(?:[.,]\d+)?\s*(?:kHz|MHz|GHz|Hz|mH|µH|uH|H|nF|µF|uF|mF|F|kΩ|kohm|Ω|ohm|V|mV|A|mA|Mbps|Gbps|ms|µs|s|%|bits?)/gi)||[];
+
+  let el=$('analysisResult');
+  el.classList.remove('hidden');
+  el.innerHTML=`
+    <h3>Analyse préliminaire</h3>
+    <p><b>Domaine probable :</b> ${domain}</p>
+    <p><b>Indices détectés :</b> ${scores.map(x=>`${x[0]} (${x[1]})`).join(' · ')}</p>
+    <p><b>Valeurs numériques repérées :</b></p>
+    <p>${vals.length?vals.slice(0,100).map(v=>`<span class="pill">${v}</span>`).join(' '):'Aucune valeur avec unité reconnue.'}</p>
+    <div class="notice">Étape suivante : confirmer les données et sélectionner un solveur spécialisé. Cette analyse ne constitue pas une correction automatique complète.</div>`;
+}
+$('analyseDoc').onclick=analyse;
+
+drawRLC();
+drawAM();
+drawSampling();
+drawPID();
+</script>
+</body>
+</html>
